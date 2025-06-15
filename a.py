@@ -11,28 +11,37 @@ output_file = os.path.join(html_dir, 'tabela.html')
 players = []
 header = []
 
-# Processa todos os arquivos HTML
 for file_path in glob.glob(os.path.join(html_dir, '*.html')):
     with open(file_path, 'r', encoding='utf-8') as f:
         soup = BeautifulSoup(f, 'html.parser')
 
-    # ID do jogador (vem do nome do arquivo)
     player_id = os.path.basename(file_path).replace('.html', '')
 
-    # Nome do jogador
     name_tag = soup.find('div', class_='col-6 text-right')
     if not name_tag:
         continue
     player_name = name_tag.text.strip()
 
-    # Coleta os itens
     items = soup.find_all('div', class_='collection-container collection-player-container position-relative')
     item_data = {}
     total_red_stars = 0
     total_yellow_stars = 0
 
+    total_red_quality_y = 0
+    total_yellow_quality_y = 0
+    total_event_quality_y = 0
+    total_purple_quality_y = 0
+    total_blue_quality_y = 0
+    total_green_quality_y = 0
+    
+    total_red_quality_r = 0
+    total_yellow_quality_r = 0
+    total_event_quality_r = 0
+    total_purple_quality_r = 0
+    total_blue_quality_r = 0
+    total_green_quality_r = 0
+
     for item in items:
-        # Imagem do item
         icon_img = item.find('img', class_='collection-item')
         if not icon_img:
             continue
@@ -46,7 +55,6 @@ for file_path in glob.glob(os.path.join(html_dir, '*.html')):
             rank_q = urlparse(img_quality).path
             rank_img = os.path.basename(rank_q)
 
-        # Contar estrelas
         stars_div = item.find('div', class_='star-container-small')
         stars_imgs = stars_div.find_all('img') if stars_div else []
 
@@ -54,38 +62,59 @@ for file_path in glob.glob(os.path.join(html_dir, '*.html')):
         has_red_star = False
         max_stars = len(stars_imgs)             
         
-        # Primeiro verifica se tem estrelas vermelhas
+           
         for star_img in stars_imgs:
             star_src = star_img['src']
-            if 'Star_Enhance.png' in star_src:  # Estrela vermelha
+            if 'Star_Enhance.png' in star_src:
                 has_red_star = True
                 break
         
-        # Se tem estrela vermelha, todas as amarelas estão preenchidas
+        currentRedStars = 0
+        currentYellowStars = 0
+        
         if has_red_star and max_stars > 0:
-            # Adiciona todas as estrelas amarelas
-            #stars.extend(['Star_Normal.png'] * max_stars)
-            total_yellow_stars += max_stars
+            currentYellowStars += max_stars
             
-            # Adiciona as estrelas vermelhas
             for star_img in stars_imgs:
                 star_src = star_img['src']
                 if 'Star_Enhance.png' in star_src:
                     stars.append('Star_Enhance.png')
-                    total_red_stars += 1
+                    currentRedStars += 1
                 elif 'Star_Enhance_BG.png' in star_src: 
                     stars.append('Star_Enhance_BG.png')
         else:
             for star_img in stars_imgs:
                 star_src = star_img['src']
-                if 'Star_Enhance.png' in star_src:  # Estrela vermelha
+                if 'Star_Enhance.png' in star_src:
                     stars.append('Star_Enhance.png')
-                    total_red_stars += 1
-                elif 'Star_Normal.png' in star_src:  # Estrela amarela
+                    currentRedStars += 1
+                elif 'Star_Normal.png' in star_src: 
                     stars.append('Star_Normal.png')
-                    total_yellow_stars += 1
-                elif 'Star_Enhance_BG.png' in star_src:  # Estrela amarela
+                    currentYellowStars += 1
+                elif 'Star_Enhance_BG.png' in star_src: 
                     stars.append('Star_Enhance_BG.png')
+
+        total_yellow_stars += currentYellowStars 
+        total_red_stars += currentRedStars
+
+        if "CollectionQuality_11" in img_quality:
+          total_red_quality_r += currentRedStars
+          total_red_quality_y += currentYellowStars
+        elif "CollectionQuality_7" in img_quality and max_stars > 3: 
+          total_yellow_quality_r += currentRedStars
+          total_yellow_quality_y += currentYellowStars
+        elif "CollectionQuality_7" in img_quality: 
+          total_event_quality_r += currentRedStars
+          total_event_quality_y += currentYellowStars
+        elif "CollectionQuality_4" in img_quality: 
+          total_purple_quality_r += currentRedStars
+          total_purple_quality_y += currentYellowStars
+        elif "CollectionQuality_3" in img_quality: 
+          total_blue_quality_r += currentRedStars
+          total_blue_quality_y += currentYellowStars
+        elif "CollectionQuality_2" in img_quality: 
+          total_green_quality_r += currentRedStars
+          total_green_quality_y += currentYellowStars
 
         item_data[item_name] = stars
 
@@ -98,11 +127,35 @@ for file_path in glob.glob(os.path.join(html_dir, '*.html')):
         'name': player_name, 
         'items': item_data,
         'red_stars': total_red_stars,
-        'yellow_stars': total_yellow_stars
+        'yellow_stars': total_yellow_stars,
+        'total_red_quality_y' : total_red_quality_y,
+        'total_yellow_quality_y' : total_yellow_quality_y,
+        'total_event_quality_y'  : total_event_quality_y,
+        'total_purple_quality_y' : total_purple_quality_y,
+        'total_blue_quality_y' : total_blue_quality_y,
+        'total_green_quality_y' : total_green_quality_y, 
+        'total_red_quality_r'  : total_red_quality_r,
+        'total_yellow_quality_r' : total_yellow_quality_r,
+        'total_event_quality_r'  : total_event_quality_r,
+        'total_purple_quality_r' : total_purple_quality_r,
+        'total_blue_quality_r' : total_blue_quality_r,
+        'total_green_quality_r' : total_green_quality_r,
     })
 
-# Ordenar jogadores por estrelas vermelhas (decrescente) e depois amarelas (decrescente)
-players.sort(key=lambda x: (-x['red_stars'], -x['yellow_stars']))
+players.sort(key=lambda x: (
+    -x['total_red_quality_r'], 
+    -x['total_red_quality_y'], 
+    -x['total_yellow_quality_r'], 
+    -x['total_yellow_quality_y'],
+    -x['total_event_quality_r'], 
+    -x['total_event_quality_y'],
+    -x['total_purple_quality_r'], 
+    -x['total_purple_quality_y'],
+    -x['total_blue_quality_r'], 
+    -x['total_blue_quality_y'],
+    -x['total_green_quality_r'], 
+    -x['total_green_quality_y'],
+    ))
 
 # Criar HTML
 html = """
@@ -247,9 +300,16 @@ html = """
                     <tr>
                         <th class="sticky-col">ID</th>
                         <th class="sticky-name">Nome</th>
-                        <th class="red-star">Vermelhas</th>
-                        <th class="yellow-star">Amarelas</th>
+                        <th class="red-star">Total Vermelhas</th>
+                        <th class="yellow-star">Total Amarelas</th>
+                        <th >Vermelhos</th>
+                        <th >Amerelos</th>
+                        <th >Evento</th>
+                        <th >Roxo</th>
+                        <th >Azul</th>
+                        <th >Verde</th>
 """
+
 
 # Cabeçalho com imagens de itens
 for img in header:
@@ -267,6 +327,20 @@ html += """
                 <tbody>
 """
 
+
+        # 'total_red_quality_y' : total_red_quality_y,
+        # 'total_yellow_quality_y' : total_yellow_quality_y,
+        # 'total_event_quality_y'  : total_event_quality_y,
+        # 'total_purple_quality_y' : total_purple_quality_y,
+        # 'total_blue_quality_y' : total_blue_quality_y,
+        # 'total_green_quality_y' : total_green_quality_y, 
+        # 'total_red_quality_r'  : total_red_quality_r,
+        # 'total_yellow_quality_r' : total_yellow_quality_r,
+        # 'total_event_quality_r'  : total_event_quality_r,
+        # 'total_purple_quality_r' : total_purple_quality_r,
+        # 'total_blue_quality_r' : total_blue_quality_r,
+        # 'total_green_quality_r' : total_green_quality_r,
+
 # Corpo da tabela
 for player in players:
     html += f'                    <tr>\n'
@@ -274,6 +348,12 @@ for player in players:
     html += f'                        <td class="sticky-name">{player["name"]}</td>\n'
     html += f'                        <td class="red-star">{player["red_stars"]}</td>\n'
     html += f'                        <td class="yellow-star">{player["yellow_stars"]}</td>\n'
+    html += f'                        <td ><p class="red-star"> V = {player["total_red_quality_r"]} </p>  <p class="yellow-star"> A = {player["total_red_quality_y"]} </p> </td>\n'
+    html += f'                        <td ><p class="red-star"> V = {player["total_yellow_quality_r"]} </p>  <p class="yellow-star"> A = {player["total_yellow_quality_y"]} </p> </td>\n'
+    html += f'                        <td ><p class="red-star"> V = {player["total_event_quality_r"]} </p>  <p class="yellow-star"> A = {player["total_event_quality_y"]} </p> </td>\n'
+    html += f'                        <td ><p class="red-star"> V = {player["total_purple_quality_r"]} </p>  <p class="yellow-star"> A = {player["total_purple_quality_y"]} </p> </td>\n'
+    html += f'                        <td ><p class="red-star"> V = {player["total_blue_quality_r"]} </p>  <p class="yellow-star"> A = {player["total_blue_quality_y"]} </p> </td>\n'
+    html += f'                        <td ><p class="red-star"> V = {player["total_green_quality_r"]} </p>  <p class="yellow-star"> A = {player["total_green_quality_y"]} </p> </td>\n'
     
     for icon in header:
         if icon['img'] in player['items']:
